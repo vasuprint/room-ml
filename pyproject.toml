@@ -1,0 +1,24 @@
+[project]
+name = "roomfastwork"
+version = "0.1.0"
+description = "Room classification workflow with FastAPI serving"
+readme = "README.md"
+requires-python = ">=3.9,<3.13"
+dependencies = [
+    "fastapi",
+    "httpie>=3.2.4",
+    "joblib",
+    "jupyter",
+    "openpyxl",
+    "pandas",
+    "pytest",
+    "scikit-learn",
+    "uvicorn[standard]",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "isort",
+    "ruff",
+]

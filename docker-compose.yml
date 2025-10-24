@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # FastAPI Room Recommendation Service
+  room-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: roomfastwork-api
+    ports:
+      - "9000:9000"
+    volumes:
+      # Mount code for development (hot reload)
+      - ./code:/app/code
+      # Mount trained model (persistent)
+      - ./code/models:/app/code/models
+      # Mount data files (read-only)
+      - ./clean:/app/clean:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=info
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - roomfast-network
+
+networks:
+  roomfast-network:
+    driver: bridge
