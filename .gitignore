@@ -34,8 +34,8 @@ env/
 *.pickle
 *.h5
 *.model
-code/models/*.joblib
-code/models/*.pkl
+!code/models/*.joblib
+!code/models/*.pkl
 
 # Data files (Excel files can be large)
 # Uncomment if you don't want to commit data files
