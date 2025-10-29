@@ -20,7 +20,7 @@ app = FastAPI(title="Room Recommendation Service", version="1.0.0")
 # Allow the Vue dev server to call the API during development.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], # change this to Vue dev server address 
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], # change this to Vue dev server address
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

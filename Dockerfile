@@ -1,17 +1,9 @@
-# Use Python 3.11 slim image
-FROM python:3.11-slim
+# Use the official uv image with Python 3.11 pre-installed.
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.cargo/bin:$PATH"
 
 # Copy dependency files
 COPY pyproject.toml uv.lock ./
@@ -27,7 +19,7 @@ COPY main.py ./
 # Create models directory if it doesn't exist
 RUN mkdir -p code/models
 
-# Train model (optional - comment out if you want to mount pre-trained model)
+# Train model
 # RUN uv run python code/train_room_model.py
 
 # Expose port 9000

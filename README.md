@@ -41,7 +41,8 @@ README.md                   เอกสารนี้
    ```bash
    uv run python code/train_room_model.py
    ```
-2. สคริปต์จะโหลดข้อมูลจาก `clean/cleaned_all_rooms.xlsx`, คัดกรองคลาสที่มีตัวอย่างน้อย, เทรน `DecisionTreeClassifier` พร้อม pipeline แปลงข้อมูล, พิมพ์ค่า accuracy/test report, แล้วบันทึกโมเดลที่ `code/models/room_classifier.joblib`
+2. สคริปต์จะโหลดข้อมูลจาก `clean/cleaned_all_rooms.xlsx`, คัดกรองคลาสที่มีตัวอย่างน้อย, เทรน `DecisionTreeClassifier`
+   พร้อม pipeline แปลงข้อมูล, พิมพ์ค่า accuracy/test report, แล้วบันทึกโมเดลที่ `code/models/room_classifier.joblib`
 3. หากต้องการสำรวจหรือปรับแต่งโมเดลแบบโต้ตอบ ให้เปิดโน้ตบุ๊กด้วย `uv run jupyter lab`
 
 ## การให้บริการโมเดลผ่าน API
@@ -51,9 +52,9 @@ README.md                   เอกสารนี้
    uv run uvicorn code.service.app:app --reload --port 9000
    ```
 2. Endpoint สำคัญ:
-   - `GET /health` ตรวจสอบสถานะเซิร์ฟเวอร์
-   - `POST /predict` รับ JSON ฟีเจอร์และส่งคืนชื่อห้องที่โมเดลแนะนำ
-   - `POST /predict_proba` (ถ้าโมเดลรองรับ) สำหรับดูความน่าจะเป็นต่อห้อง
+    - `GET /health` ตรวจสอบสถานะเซิร์ฟเวอร์
+    - `POST /predict` รับ JSON ฟีเจอร์และส่งคืนชื่อห้องที่โมเดลแนะนำ
+    - `POST /predict_proba` (ถ้าโมเดลรองรับ) สำหรับดูความน่าจะเป็นต่อห้อง
 3. ตัวอย่างคำสั่งทดสอบด้วย `httpie` (ติดตั้งด้วย `uv add httpie`):
    ```bash
    uv run http POST http://127.0.0.1:9000/predict \
@@ -78,8 +79,14 @@ README.md                   เอกสารนี้
 ### วิธีที่ 1: ใช้ Docker Compose
 
 ```bash
-# 1. Train โมเดลก่อน (ถ้ายังไม่มีไฟล์โมเดล)
+# 1.1 Train โมเดลก่อน (ถ้ายังไม่มีไฟล์โมเดล)
 uv run python code/train_room_model.py
+
+# 1.2 create an external network 
+docker network create common_backend_network
+
+# 1.3 check external network 
+docker network ls
 
 # 2. Build และรัน service
 docker-compose up --build
@@ -186,8 +193,8 @@ curl -X POST http://localhost:9000/predict \
 
 1. **API รับข้อมูลผ่าน HTTP POST body ในรูปแบบ JSON**
 
-   - ส่งข้อมูลเป็น JSON object ใน body ของ HTTP request
-   - Content-Type ต้องเป็น `application/json`
+    - ส่งข้อมูลเป็น JSON object ใน body ของ HTTP request
+    - Content-Type ต้องเป็น `application/json`
 
 2. **ต้องเปิด FastAPI service ทิ้งไว้รันตลอดเวลา**
 
@@ -195,13 +202,13 @@ curl -X POST http://localhost:9000/predict \
    uv run uvicorn code.service.app:app --reload --port 9000
    ```
 
-   - คำสั่งนี้จะเปิด web server ที่ port 8000
-   - ให้ terminal นี้รันอยู่ตลอด (ไม่ปิด)
-   - API จะพร้อมรับ request ที่ `http://127.0.0.1:9000`
+    - คำสั่งนี้จะเปิด web server ที่ port 8000
+    - ให้ terminal นี้รันอยู่ตลอด (ไม่ปิด)
+    - API จะพร้อมรับ request ที่ `http://127.0.0.1:9000`
 
 3. **คำสั่ง `uv run http POST ...` เป็นเพียงเครื่องมือทดสอบ**
-   - HTTPie เป็นเครื่องมือ CLI สำหรับทดสอบ API
-   - ในการใช้งานจริง คุณจะเรียก API จากโค้ดของคุณเอง
+    - HTTPie เป็นเครื่องมือ CLI สำหรับทดสอบ API
+    - ในการใช้งานจริง คุณจะเรียก API จากโค้ดของคุณเอง
 
 ### โครงสร้างข้อมูลที่ส่งเข้า API
 
@@ -238,37 +245,37 @@ API endpoint `/predict` รับข้อมูล JSON ในรูปแบ�
 ```javascript
 // ใช้ fetch API (มีใน browser ทุกตัว)
 async function predictRoom() {
-  const response = await fetch("http://127.0.0.1:9000/predict", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      department: "งานบริหารทั่วไป",
-      duration_hours: 2.0,
-      event_period: "บ่าย",
-      seats: 35,
-    }),
-  });
+    const response = await fetch("http://127.0.0.1:9000/predict", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            department: "งานบริหารทั่วไป",
+            duration_hours: 2.0,
+            event_period: "บ่าย",
+            seats: 35,
+        }),
+    });
 
-  const data = await response.json();
-  console.log("ห้องที่แนะนำ:", data.predicted_room);
-  return data.predicted_room;
+    const data = await response.json();
+    console.log("ห้องที่แนะนำ:", data.predicted_room);
+    return data.predicted_room;
 }
 
 // หรือใช้ axios (ติดตั้งด้วย npm install axios)
 import axios from "axios";
 
 async function predictRoomWithAxios() {
-  const response = await axios.post("http://127.0.0.1:9000/predict", {
-    department: "งานบริหารทั่วไป",
-    duration_hours: 2.0,
-    event_period: "บ่าย",
-    seats: 35,
-  });
+    const response = await axios.post("http://127.0.0.1:9000/predict", {
+        department: "งานบริหารทั่วไป",
+        duration_hours: 2.0,
+        event_period: "บ่าย",
+        seats: 35,
+    });
 
-  console.log("ห้องที่แนะนำ:", response.data.predicted_room);
-  return response.data.predicted_room;
+    console.log("ห้องที่แนะนำ:", response.data.predicted_room);
+    return response.data.predicted_room;
 }
 ```
 
@@ -313,88 +320,88 @@ if response.status_code == 200:
 ```html
 <!DOCTYPE html>
 <html lang="th">
-  <head>
-    <meta charset="UTF-8" />
+<head>
+    <meta charset="UTF-8"/>
     <title>ระบบแนะนำห้องประชุม</title>
-  </head>
-  <body>
-    <h1>ระบบแนะนำห้องประชุม</h1>
+</head>
+<body>
+<h1>ระบบแนะนำห้องประชุม</h1>
 
-    <form id="roomForm">
-      <div>
+<form id="roomForm">
+    <div>
         <label>หน่วยงาน:</label>
-        <input type="text" name="department" required />
-      </div>
+        <input type="text" name="department" required/>
+    </div>
 
-      <div>
+    <div>
         <label>จำนวนชั่วโมง:</label>
         <input
-          type="number"
-          name="duration_hours"
-          step="0.5"
-          min="0"
-          required
+                type="number"
+                name="duration_hours"
+                step="0.5"
+                min="0"
+                required
         />
-      </div>
+    </div>
 
-      <div>
+    <div>
         <label>ช่วงเวลา:</label>
         <select name="event_period" required>
-          <option value="เช้า">เช้า</option>
-          <option value="บ่าย">บ่าย</option>
-          <option value="เย็น">เย็น</option>
+            <option value="เช้า">เช้า</option>
+            <option value="บ่าย">บ่าย</option>
+            <option value="เย็น">เย็น</option>
         </select>
-      </div>
+    </div>
 
-      <div>
+    <div>
         <label>จำนวนที่นั่ง:</label>
-        <input type="number" name="seats" min="1" required />
-      </div>
+        <input type="number" name="seats" min="1" required/>
+    </div>
 
-      <button type="submit">ค้นหาห้องประชุม</button>
-    </form>
+    <button type="submit">ค้นหาห้องประชุม</button>
+</form>
 
-    <div id="result"></div>
+<div id="result"></div>
 
-    <script>
-      document
-        .getElementById("roomForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
+<script>
+    document
+            .getElementById("roomForm")
+            .addEventListener("submit", async (e) => {
+                e.preventDefault();
 
-          // รวบรวมข้อมูลจากฟอร์ม
-          const formData = new FormData(e.target);
-          const data = {
-            department: formData.get("department"),
-            duration_hours: parseFloat(formData.get("duration_hours")),
-            event_period: formData.get("event_period"),
-            seats: parseInt(formData.get("seats")),
-          };
+                // รวบรวมข้อมูลจากฟอร์ม
+                const formData = new FormData(e.target);
+                const data = {
+                    department: formData.get("department"),
+                    duration_hours: parseFloat(formData.get("duration_hours")),
+                    event_period: formData.get("event_period"),
+                    seats: parseInt(formData.get("seats")),
+                };
 
-          try {
-            // เรียก API
-            const response = await fetch("http://127.0.0.1:9000/predict", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(data),
+                try {
+                    // เรียก API
+                    const response = await fetch("http://127.0.0.1:9000/predict", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify(data),
+                    });
+
+                    const result = await response.json();
+
+                    // แสดงผลลัพธ์
+                    document.getElementById(
+                            "result"
+                    ).innerHTML = `<h2>ห้องที่แนะนำ: ${result.predicted_room}</h2>`;
+                } catch (error) {
+                    document.getElementById(
+                            "result"
+                    ).innerHTML = `<p style="color: red;">เกิดข้อผิดพลาด: ${error.message}</p>`;
+                }
             });
-
-            const result = await response.json();
-
-            // แสดงผลลัพธ์
-            document.getElementById(
-              "result"
-            ).innerHTML = `<h2>ห้องที่แนะนำ: ${result.predicted_room}</h2>`;
-          } catch (error) {
-            document.getElementById(
-              "result"
-            ).innerHTML = `<p style="color: red;">เกิดข้อผิดพลาด: ${error.message}</p>`;
-          }
-        });
-    </script>
-  </body>
+</script>
+</body>
 </html>
 ```
 
@@ -468,19 +475,19 @@ Content-Type: application/json
 
 - **CORS**: FastAPI เปิด CORS สำหรับ `http://localhost:5173` (Vue dev server) แล้ว
 
-  - หากใช้ port อื่น ให้แก้ไขใน `code/service/app.py` ที่บรรทัด `allow_origins`
-  - สำหรับ production ให้เปลี่ยนเป็น domain จริงของคุณ
+    - หากใช้ port อื่น ให้แก้ไขใน `code/service/app.py` ที่บรรทัด `allow_origins`
+    - สำหรับ production ให้เปลี่ยนเป็น domain จริงของคุณ
 
 - **Error Handling**: ควรจัดการ error ที่อาจเกิดขึ้น เช่น:
 
-  - Network error (API ไม่ตอบสนอง)
-  - Validation error (ข้อมูลไม่ถูกต้อง)
-  - Server error (API เกิดข้อผิดพลาด)
+    - Network error (API ไม่ตอบสนอง)
+    - Validation error (ข้อมูลไม่ถูกต้อง)
+    - Server error (API เกิดข้อผิดพลาด)
 
 - **Production Deployment**:
-  - อย่าใช้ `--reload` ใน production
-  - ใช้ reverse proxy (Nginx, Apache) หน้า FastAPI
-  - ตั้งค่า HTTPS และ security headers
+    - อย่าใช้ `--reload` ใน production
+    - ใช้ reverse proxy (Nginx, Apache) หน้า FastAPI
+    - ตั้งค่า HTTPS และ security headers
 
 ## การเชื่อมต่อกับ Vue
 
@@ -503,11 +510,14 @@ Content-Type: application/json
    ```
 
 3. เรียกใช้ใน component และแสดงผลห้องที่โมเดลทำนาย
-4. FastAPI เปิด CORS ไว้สำหรับ `http://localhost:5173` แล้ว หาก deploy จริงให้ปรับ `allow_origins` ให้ตรงกับโดเมนที่ใช้งาน
+4. FastAPI เปิด CORS ไว้สำหรับ `http://localhost:5173` แล้ว หาก deploy จริงให้ปรับ `allow_origins`
+   ให้ตรงกับโดเมนที่ใช้งาน
 
 ## การทดสอบและตรวจสอบผลลัพธ์
 
 - **ชุดทดสอบอัตโนมัติ**: เพิ่มไฟล์ลงใน `code/tests/` แล้วรัน `uv run pytest -q`
-- **ตรวจสอบโมเดล**: หลังเทรนสามารถเปิดไฟล์ `code/models/room_classifier.joblib` ด้วยโน้ตบุ๊กเพื่อตรวจผล เช่น confusion matrix
-- **ตรวจสอบ API**: ใช้ `curl` หรือ Swagger UI เพื่อยืนยันการตอบกลับเมื่อกรอกข้อมูลหลากหลายกรณี (เช่น จำนวนที่นั่งสูง/ต่ำ, แผนกหายาก)
+- **ตรวจสอบโมเดล**: หลังเทรนสามารถเปิดไฟล์ `code/models/room_classifier.joblib` ด้วยโน้ตบุ๊กเพื่อตรวจผล เช่น confusion
+  matrix
+- **ตรวจสอบ API**: ใช้ `curl` หรือ Swagger UI เพื่อยืนยันการตอบกลับเมื่อกรอกข้อมูลหลากหลายกรณี (เช่น
+  จำนวนที่นั่งสูง/ต่ำ, แผนกหายาก)
 - **การตรวจสอบรวมกับ Vue**: เมื่อเปิด front-end (`npm run dev`) ให้ทดสอบฟอร์มจริงว่ารับคำตอบตรงกับผลจาก `httpie`
