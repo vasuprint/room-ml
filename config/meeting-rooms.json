@@ -1,0 +1,147 @@
+[
+  {
+    "uuid": "b65ac6d6-0a6e-4017-88a9-eb11130bda09",
+    "room_name": "ห้องประชุมเจ้าพระยาบวรราชนายก (ชั้นบน)",
+    "location_details": "อาคารเจ้าพระยาบวรราชนายก (ชั้นบน)",
+    "capacity_min": 100,
+    "capacity_max": 182,
+    "hourly_rate": 1000,
+    "notes": "(8 ชม. = 8,000 บาท)",
+    "notes1": "ใส่ข้อความตัวอย่าง",
+    "notes2": "ใส่ข้อความตัวอย่าง",
+    "is_bookable": true
+  },
+  {
+    "uuid": "15cdfd27-d0ad-437c-aaeb-ee340eebc255",
+    "room_name": "ห้องประชุมเจ้าพระยาบวรราชนายก (ชั้นล่าง)",
+    "location_details": "อาคารเจ้าพระยาบวรราชนายก (ชั้นล่าง)",
+    "capacity_min": 30,
+    "capacity_max": 80,
+    "hourly_rate": 1000,
+    "notes": "(8 ชม. = 8,000 บาท)",
+    "notes1": "ใส่ข้อความตัวอย่าง",
+    "notes2": "ใส่ข้อความตัวอย่าง",
+    "is_bookable": true
+  },
+  {
+    "uuid": "38f4c25b-3a9b-4513-93a2-de442328d321",
+    "room_name": "หอประชุม 1",
+    "location_details": "อาคารป่าตอง",
+    "capacity_min": 12,
+    "capacity_max": 20,
+    "hourly_rate": 400,
+    "notes": "(8 ชม. = 3,200 บาท)",
+    "notes1": "ใส่ข้อความตัวอย่าง",
+    "notes2": "ใส่ข้อความตัวอย่าง",
+    "is_bookable": true
+  },
+  {
+    "uuid": "ed00f84a-cdb9-4196-9f0b-d3d9bc907819",
+    "room_name": "ห้องประชุม อยุธยา – อาเซียน",
+    "location_details": "อาคารสำนักงานอธิการบดี",
+    "capacity_min": 15,
+    "capacity_max": 30,
+    "hourly_rate": 1000,
+    "notes": "(8 ชม. = 8,000 บาท)",
+    "notes1": "ใส่ข้อความตัวอย่าง",
+    "notes2": "ใส่ข้อความตัวอย่าง",
+    "is_bookable": true
+  },
+  {
+    "uuid": "0781c47a-2fd6-4942-a0ed-f090db07819a",
+    "room_name": "ห้องประชุม อยุธยา-โปรตุเกส",
+    "location_details": "อาคารสำนักงานอธิการบดี",
+    "capacity_min": 1,
+    "capacity_max": 12,
+    "hourly_rate": 250,
+    "notes": "(8 ชม. = 2,000 บาท)",
+    "notes1": "ใส่ข้อความตัวอย่าง",
+    "notes2": "ใส่ข้อความตัวอย่าง",
+    "is_bookable": true
+  },
+  {
+    "uuid": "6484d100-a4db-4870-9606-bc522724c68f",
+    "room_name": "ห้องประชุม อยุธยา-ฮอลันดา",
+    "location_details": "อาคารสำนักงานอธิการบดี",
+    "capacity_min": 1,
+    "capacity_max": 8,
+    "hourly_rate": 200,
+    "notes": "(8 ชม. = 1,600 บาท)",
+    "notes1": "ใส่ข้อความตัวอย่าง",
+    "notes2": "ใส่ข้อความตัวอย่าง",
+    "is_bookable": true
+  },
+  {
+    "uuid": "90eaed3a-cedc-410f-b136-010de7cd7e32",
+    "room_name": "ห้องประชุมบ้านพลูหลวง",
+    "location_details": "อาคารบ้านพลูหลวง",
+    "capacity_min": 40,
+    "capacity_max": 80,
+    "hourly_rate": 450,
+    "notes": "(8 ชม. = 3,600 บาท)",
+    "notes1": "ใส่ข้อความตัวอย่าง",
+    "notes2": "ใส่ข้อความตัวอย่าง",
+    "is_bookable": true
+  },
+  {
+    "uuid": "777fba40-ccf2-40cd-8942-1d4d44fec51e",
+    "room_name": "ห้องประชุมต้นโมก",
+    "location_details": "อาคารบรรณราชนครินทร์",
+    "capacity_min": 35,
+    "capacity_max": 80,
+    "hourly_rate": 650,
+    "notes": "(8 ชม. = 5,200 บาท)",
+    "notes1": "ใส่ข้อความตัวอย่าง",
+    "notes2": "ใส่ข้อความตัวอย่าง",
+    "is_bookable": true
+  },
+  {
+    "uuid": "d518e778-bb7d-4f26-960a-75666035891b",
+    "room_name": "ห้องประชุมใหญ่",
+    "location_details": "อาคาร 100 ปี",
+    "capacity_min": 160,
+    "capacity_max": 400,
+    "hourly_rate": 2300,
+    "notes": "(8 ชม. = 18,400 บาท)",
+    "notes1": "ใส่ข้อความตัวอย่าง",
+    "notes2": "ใส่ข้อความตัวอย่าง",
+    "is_bookable": true
+  },
+  {
+    "uuid": "857415e1-64e1-4d8a-b9ae-eff7fa24f385",
+    "room_name": "ห้องประชุม 31120",
+    "location_details": "อาคาร 100 ปี",
+    "capacity_min": 30,
+    "capacity_max": 120,
+    "hourly_rate": 650,
+    "notes": "(8 ชม. = 5,200 บาท)",
+    "notes1": "ใส่ข้อความตัวอย่าง",
+    "notes2": "ใส่ข้อความตัวอย่าง",
+    "is_bookable": true
+  },
+  {
+    "uuid": "aac4bfff-6913-436e-bdbd-b20730f4a7d2",
+    "room_name": "ห้องประชุม",
+    "location_details": "อาคารบัณฑิตวิทยาลัย",
+    "capacity_min": 50,
+    "capacity_max": 60,
+    "hourly_rate": 100,
+    "notes": "(8 ชม. = 800 บาท)",
+    "notes1": "ใส่ข้อความตัวอย่าง",
+    "notes2": "ใส่ข้อความตัวอย่าง",
+    "is_bookable": true
+  },
+  {
+    "uuid": "1ad74b1c-189a-4a95-a84e-52dd87181d49",
+    "room_name": "ห้องประชุมมหาวิทยาลัย",
+    "location_details": "มหาวิทยาลัยราชภัฏพระนครศรีอยุธยา",
+    "capacity_min": 200,
+    "capacity_max": 700,
+    "hourly_rate": 2500,
+    "notes": "(8 ชม. = 20,000 บาท)",
+    "notes1": "ใส่ข้อความตัวอย่าง",
+    "notes2": "ใส่ข้อความตัวอย่าง",
+    "is_bookable": true
+  }
+
+]
