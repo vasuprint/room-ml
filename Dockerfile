@@ -13,7 +13,6 @@ RUN uv sync --no-dev
 
 # Copy application code
 COPY code/ ./code/
-COPY clean/ ./clean/
 COPY config/ ./config/
 COPY main.py ./
 
