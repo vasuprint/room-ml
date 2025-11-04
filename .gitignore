@@ -45,7 +45,8 @@ env/
 
 # Jupyter Notebook
 .ipynb_checkpoints/
-*.ipynb
+# Keep notebooks for portfolio showcase
+# *.ipynb
 
 # IDE
 .vscode/
