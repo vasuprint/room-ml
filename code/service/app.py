@@ -3,19 +3,29 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
+import json
+import uuid
+import logging
 
 import joblib
 import pandas as pd
+import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-APP_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = APP_DIR.parent
-MODEL_PATH = PROJECT_ROOT / "models" / "room_classifier.joblib"
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Room Recommendation Service", version="1.0.0")
+APP_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = APP_DIR.parent.parent  # Go up 2 levels from code/service to project root
+MODEL_PATH = PROJECT_ROOT / "code" / "models" / "room_classifier.joblib"
+MEETING_ROOMS_PATH = PROJECT_ROOT / "config" / "meeting-rooms.json"
+ROOM_MAPPING_PATH = PROJECT_ROOT / "config" / "room-mapping.json"
+
+app = FastAPI(title="Room Recommendation Service", version="2.0.0")
 
 # Allow the Vue dev server to call the API during development.
 app.add_middleware(
@@ -39,9 +49,19 @@ class BookingFeatures(BaseModel):
                 "department": "งานบริหารทั่วไป",
                 "duration_hours": 2.0,
                 "event_period": "บ่าย",
-                "seats": 35,
+                "seats": 35
             }
         }
+
+
+class RoomRecommendation(BaseModel):
+    rank: int
+    room: Dict[str, Any]
+
+
+class RecommendationResponse(BaseModel):
+    recommendations: List[RoomRecommendation]
+    request_id: str
 
 
 @lru_cache(maxsize=1)
@@ -52,6 +72,32 @@ def load_model() -> Any:
             "Trained model not found. Run `python code/train_room_model.py` first."
         )
     return joblib.load(MODEL_PATH)
+
+
+@lru_cache(maxsize=1)
+def load_meeting_rooms() -> Dict[str, Any]:
+    """Load and cache meeting rooms data."""
+    if not MEETING_ROOMS_PATH.exists():
+        raise FileNotFoundError(f"Meeting rooms file not found at {MEETING_ROOMS_PATH}")
+
+    with open(MEETING_ROOMS_PATH, 'r', encoding='utf-8') as f:
+        rooms_data = json.load(f)
+
+    # Create a dictionary indexed by room_name for fast lookup
+    rooms_dict = {room['room_name']: room for room in rooms_data}
+    return rooms_dict
+
+
+@lru_cache(maxsize=1)
+def load_room_mapping() -> Dict[str, str]:
+    """Load and cache room name mappings."""
+    if not ROOM_MAPPING_PATH.exists():
+        raise FileNotFoundError(f"Room mapping file not found at {ROOM_MAPPING_PATH}")
+
+    with open(ROOM_MAPPING_PATH, 'r', encoding='utf-8') as f:
+        mapping_data = json.load(f)
+
+    return mapping_data['model_to_actual_mapping']
 
 
 @app.on_event("startup")
@@ -101,3 +147,98 @@ def predict_proba(features: BookingFeatures) -> Dict[str, Dict[str, float]]:
             str(room): float(prob) for room, prob in zip(classes, proba)
         }
     }
+
+
+@app.post("/recommend", response_model=RecommendationResponse)
+def get_recommendations(features: BookingFeatures) -> RecommendationResponse:
+    """Return top 3 recommended rooms with details from meeting-rooms.json."""
+    try:
+        pipeline = load_model()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load model: {str(e)}")
+
+    # Load room data and mappings
+    try:
+        meeting_rooms = load_meeting_rooms()
+        room_mapping = load_room_mapping()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=500, detail=f"Configuration file not found: {str(e)}")
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Invalid JSON in configuration file: {str(e)}")
+
+    # Prepare input data
+    payload_df = pd.DataFrame([features.dict()])
+
+    # Check if model supports predict_proba
+    if not hasattr(pipeline, "predict_proba"):
+        raise HTTPException(
+            status_code=400,
+            detail="Current model does not support probability predictions. Please retrain with a compatible model."
+        )
+
+    # Get predictions with probabilities
+    try:
+        proba = pipeline.predict_proba(payload_df)[0]
+        classes = pipeline.classes_
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Model prediction failed: {str(e)}")
+
+    # Sort by probability (descending)
+    room_probs = list(zip(classes, proba))
+    room_probs.sort(key=lambda x: x[1], reverse=True)
+
+    # Get top 3 recommendations
+    recommendations = []
+    unmapped_rooms = []
+    rank = 1
+
+    for room_name, probability in room_probs[:10]:  # Check top 10 to find at least 3 mappable rooms
+        # Map model room name to actual room name
+        actual_room_name = room_mapping.get(str(room_name))
+
+        if actual_room_name is None:
+            unmapped_rooms.append(str(room_name))
+            continue
+
+        if actual_room_name not in meeting_rooms:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Mapped room '{actual_room_name}' not found in meeting-rooms.json for model prediction '{room_name}'"
+            )
+
+        room_data = meeting_rooms[actual_room_name]
+
+        recommendations.append(RoomRecommendation(
+            rank=rank,
+            room={
+                "id": room_data["uuid"],
+                "name": room_data["room_name"],
+                "location": room_data["location_details"],
+                "capacity_min": room_data["capacity_min"],
+                "capacity_max": room_data["capacity_max"],
+                "price": room_data["hourly_rate"]
+            }
+        ))
+        rank += 1
+
+        if len(recommendations) >= 3:
+            break
+
+    # Check if we have enough recommendations
+    if len(recommendations) == 0:
+        raise HTTPException(
+            status_code=500,
+            detail=f"No room mappings found for predictions: {', '.join(unmapped_rooms[:3])}"
+        )
+
+    if len(recommendations) < 3 and unmapped_rooms:
+        # Log warning but return what we have
+        logger.warning(f"Could not map these rooms: {', '.join(unmapped_rooms)}")
+
+    # Generate request ID
+    request_id = f"req-{str(uuid.uuid4())[:8]}"
+
+    return RecommendationResponse(
+        recommendations=recommendations,
+        request_id=request_id
+    )

@@ -57,12 +57,12 @@ docker-compose.yml
 htmlcov/
 .tox/
 
-# Laravel integration (not needed in Python container)
-laravel-integration/
+# Removed laravel-integration (no longer exists)
 
 # Jupyter
 .ipynb_checkpoints/
-*.ipynb
+# Keep notebooks in Docker image
+# *.ipynb
 
 # Logs
 *.log
