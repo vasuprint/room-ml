@@ -13,11 +13,34 @@ import pandas as pd
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Mapping from Thai/English to standard English for event_period
+EVENT_PERIOD_MAPPING = {
+    # Thai input
+    "เช้า": "Morning",
+    "บ่าย": "Afternoon",
+    "ทั้งวัน": "All Day",
+    "กลางคืน": "Night",
+    "ค่ำ": "Night",
+
+    # English input (case-insensitive)
+    "morning": "Morning",
+    "afternoon": "Afternoon",
+    "all day": "All Day",
+    "allday": "All Day",
+    "night": "Night",
+
+    # Standard format (keep as-is)
+    "Morning": "Morning",
+    "Afternoon": "Afternoon",
+    "All Day": "All Day",
+    "Night": "Night",
+}
 
 APP_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = APP_DIR.parent.parent  # Go up 2 levels from code/service to project root
@@ -42,6 +65,30 @@ class BookingFeatures(BaseModel):
     duration_hours: float = Field(..., ge=0.0, example=2.5)
     event_period: str = Field(..., example="บ่าย")
     seats: int = Field(..., ge=1, example=40)
+
+    @validator('event_period')
+    def normalize_event_period(cls, v):
+        """Normalize event_period to English (supports both Thai and English input)."""
+        if not v:
+            raise ValueError("event_period is required")
+
+        # Normalize input: strip whitespace
+        normalized = v.strip()
+
+        # Try to map from Thai/English to standard English
+        mapped_value = EVENT_PERIOD_MAPPING.get(normalized)
+
+        if mapped_value:
+            return mapped_value
+
+        # If not in mapping, raise error with helpful message
+        valid_values_thai = ["เช้า", "บ่าย", "ทั้งวัน", "กลางคืน"]
+        valid_values_eng = ["Morning", "Afternoon", "All Day", "Night"]
+        raise ValueError(
+            f"Invalid event_period: '{v}'. "
+            f"Accepted Thai values: {valid_values_thai} "
+            f"or English values: {valid_values_eng}"
+        )
 
     class Config:
         schema_extra = {
@@ -100,6 +147,37 @@ def load_room_mapping() -> Dict[str, str]:
     return mapping_data['model_to_actual_mapping']
 
 
+def calculate_fit_score(room_data: Dict[str, Any], requested_seats: int) -> float:
+    """
+    Calculate room suitability based on capacity.
+
+    Args:
+        room_data: Room information from meeting-rooms.json
+        requested_seats: Number of seats requested
+
+    Returns:
+        fit_score (0.0 - 1.0): Higher score means better fit
+
+    Formula:
+        fit_score = 1.0 - |requested_seats - capacity_min| / capacity_max
+
+    Example:
+        Room capacity: 40-80, Requested: 50
+        fit_score = 1.0 - |50-40|/80 = 1.0 - 10/80 = 0.875
+    """
+    capacity_min = room_data["capacity_min"]
+    capacity_max = room_data["capacity_max"]
+
+    # Check if room can accommodate the requested seats
+    if requested_seats < capacity_min or requested_seats > capacity_max:
+        return 0.0
+
+    # Calculate fitness (closer to capacity_min is better)
+    fit_score = 1.0 - abs(requested_seats - capacity_min) / capacity_max
+
+    return fit_score
+
+
 @app.on_event("startup")
 def _warm_model() -> None:
     """Ensure the model is loaded when the service starts."""
@@ -151,7 +229,7 @@ def predict_proba(features: BookingFeatures) -> Dict[str, Dict[str, float]]:
 
 @app.post("/recommend", response_model=RecommendationResponse)
 def get_recommendations(features: BookingFeatures) -> RecommendationResponse:
-    """Return top 3 recommended rooms with details from meeting-rooms.json."""
+    """Return top 3 recommended rooms based on capacity fit score."""
     try:
         pipeline = load_model()
     except Exception as e:
@@ -169,71 +247,78 @@ def get_recommendations(features: BookingFeatures) -> RecommendationResponse:
     # Prepare input data
     payload_df = pd.DataFrame([features.dict()])
 
-    # Check if model supports predict_proba
-    if not hasattr(pipeline, "predict_proba"):
-        raise HTTPException(
-            status_code=400,
-            detail="Current model does not support probability predictions. Please retrain with a compatible model."
-        )
-
-    # Get predictions with probabilities
+    # =====================================================
+    # [OPTIONAL] Get ML predictions for logging/comparison
+    # =====================================================
     try:
-        proba = pipeline.predict_proba(payload_df)[0]
-        classes = pipeline.classes_
+        if hasattr(pipeline, "predict_proba"):
+            proba = pipeline.predict_proba(payload_df)[0]
+            classes = pipeline.classes_
+            ml_predictions = list(zip(classes, proba))
+            ml_predictions.sort(key=lambda x: x[1], reverse=True)
+
+            # Log ML top 3 for comparison
+            ml_top3_names = []
+            for room_name, prob in ml_predictions[:3]:
+                actual_name = room_mapping.get(str(room_name), str(room_name))
+                ml_top3_names.append(f"{actual_name} (prob={prob:.3f})")
+            logger.info(f"ML Top 3 predictions: {ml_top3_names}")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Model prediction failed: {str(e)}")
+        logger.warning(f"Could not get ML predictions: {str(e)}")
 
-    # Sort by probability (descending)
-    room_probs = list(zip(classes, proba))
-    room_probs.sort(key=lambda x: x[1], reverse=True)
+    # =====================================================
+    # NEW LOGIC: Capacity-based Ranking
+    # =====================================================
+    requested_seats = features.seats
+    suitable_rooms = []
 
-    # Get top 3 recommendations
+    # Loop through ALL rooms in meeting-rooms.json
+    for actual_room_name, room_data in meeting_rooms.items():
+        # Calculate fit score (returns 0 if capacity not suitable)
+        fit_score = calculate_fit_score(room_data, requested_seats)
+
+        if fit_score > 0:
+            suitable_rooms.append({
+                'room_name': actual_room_name,
+                'room_data': room_data,
+                'fit_score': fit_score
+            })
+
+    # Sort by fit_score (descending)
+    suitable_rooms.sort(key=lambda x: x['fit_score'], reverse=True)
+
+    logger.info(f"Found {len(suitable_rooms)} suitable rooms for {requested_seats} seats")
+
+    # Log top 3 capacity-based recommendations
+    if suitable_rooms:
+        capacity_top3 = [f"{r['room_name']} (fit={r['fit_score']:.3f})" for r in suitable_rooms[:3]]
+        logger.info(f"Capacity-based Top 3: {capacity_top3}")
+
+    # Build recommendations from top 3
     recommendations = []
-    unmapped_rooms = []
-    rank = 1
-
-    for room_name, probability in room_probs[:10]:  # Check top 10 to find at least 3 mappable rooms
-        # Map model room name to actual room name
-        actual_room_name = room_mapping.get(str(room_name))
-
-        if actual_room_name is None:
-            unmapped_rooms.append(str(room_name))
-            continue
-
-        if actual_room_name not in meeting_rooms:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Mapped room '{actual_room_name}' not found in meeting-rooms.json for model prediction '{room_name}'"
-            )
-
-        room_data = meeting_rooms[actual_room_name]
+    for idx, room_info in enumerate(suitable_rooms[:3]):
+        room_data = room_info['room_data']
 
         recommendations.append(RoomRecommendation(
-            rank=rank,
+            rank=idx + 1,
             room={
                 "id": room_data["uuid"],
                 "name": room_data["room_name"],
                 "location": room_data["location_details"],
                 "capacity_min": room_data["capacity_min"],
                 "capacity_max": room_data["capacity_max"],
-                "price": room_data["hourly_rate"]
+                "price": room_data["hourly_rate"],
+                "fit_score": round(room_info['fit_score'], 3)  # Add fit_score to response
             }
         ))
-        rank += 1
 
-        if len(recommendations) >= 3:
-            break
-
-    # Check if we have enough recommendations
+    # Handle case: no suitable rooms found
     if len(recommendations) == 0:
         raise HTTPException(
-            status_code=500,
-            detail=f"No room mappings found for predictions: {', '.join(unmapped_rooms[:3])}"
+            status_code=404,
+            detail=f"No suitable rooms found for {requested_seats} seats. "
+                   f"Available capacity range: 1-700 seats."
         )
-
-    if len(recommendations) < 3 and unmapped_rooms:
-        # Log warning but return what we have
-        logger.warning(f"Could not map these rooms: {', '.join(unmapped_rooms)}")
 
     # Generate request ID
     request_id = f"req-{str(uuid.uuid4())[:8]}"
